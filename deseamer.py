@@ -15,7 +15,7 @@ def add_hseam(pixels, seam, cols):
 	return np.array([np.insert(pixels[:, col], seam[col], cols[col]) for col in range(len(seam))]).T
 
 In=1
-suffix = 'inv'
+suffix = 'invsupersobelrand'
 pygame.init()
 w = 768
 h = 1024

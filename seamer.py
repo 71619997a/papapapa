@@ -1,6 +1,8 @@
 import pygame
 import time
 import numpy as np
+import scipy as sp
+from scipy import signal
 from pygame.locals import *
 def put_array(surface, myarr):          # put array into surface
     bv = surface.get_view("0")
@@ -16,8 +18,67 @@ def importance(arr):
 	b_padded = np.lib.pad(b_arr, 1, 'reflect')
 	return import_1chan(r_arr, r_padded) + import_1chan(g_arr, g_padded) + import_1chan(b_arr, b_padded)
 
+def importance_sq(arr):
+	r_arr = (arr >> 16) % 256
+	g_arr = (arr >> 8) % 256
+	b_arr = arr % 256
+	r_padded = np.lib.pad(r_arr, 1, 'reflect')
+	g_padded = np.lib.pad(g_arr, 1, 'reflect')
+	b_padded = np.lib.pad(b_arr, 1, 'reflect')
+	return import_1chan(r_arr, r_padded)**2 + import_1chan(g_arr, g_padded)**2 + import_1chan(b_arr, b_padded)**2
+
+def importance_sq2(arr):
+	r_arr = (arr >> 16) % 256
+	g_arr = (arr >> 8) % 256
+	b_arr = arr % 256
+	r_padded = np.lib.pad(r_arr, 1, 'reflect')
+	g_padded = np.lib.pad(g_arr, 1, 'reflect')
+	b_padded = np.lib.pad(b_arr, 1, 'reflect')
+	return sqimport_1chan(r_arr, r_padded) + sqimport_1chan(g_arr, g_padded) + sqimport_1chan(b_arr, b_padded)
+
+def importance_sobel(arr):
+	r_arr = (arr >> 16) % 256
+	g_arr = (arr >> 8) % 256
+	b_arr = arr % 256
+	kern1 = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+	kern2 = kern1.T
+	return (signal.convolve2d( r_arr, kern1, 'same')**2 + signal.convolve2d(g_arr, kern1, 'same')**2 + signal.convolve2d(b_arr, kern1,  'same')**2) \
+	+ (signal.convolve2d( r_arr, kern2, 'same')**2 + signal.convolve2d(g_arr, kern2, 'same')**2 + signal.convolve2d( b_arr, kern2, 'same')**2) \
+
+def importance_supersobel(arr):
+	r_arr = (arr >> 16) % 256
+	g_arr = (arr >> 8) % 256
+	b_arr = arr % 256
+	r_padded = np.lib.pad(r_arr, 3, 'reflect')
+	g_padded = np.lib.pad(g_arr, 3, 'reflect')
+	b_padded = np.lib.pad(b_arr, 3, 'reflect')
+	kern1 = np.array(
+	[[float(-3/18),float(-2/13),float(-1/10),float(0),float( 1/10),float(2/13),float(3/18)],
+           [float(-3/13),float(-2/8),float( -1/5),float( 0),float( 1/5),float( 2/8),float( 3/13)],
+           [float(-3/10),float(-2/5),float( -1/2),float( 0),float( 1/2),float( 2/5),float( 3/10)],
+  [float(-3/9 ),float(-2/4),float( -1/1),float( 0),float( 1/1),float( 2/4),float( 3/9 )],
+           [float(-3/10),float(-2/5),float( -1/2),float( 0),float( 1/2),float( 2/5),float( 3/10)],
+           [float(-3/13),float(-2/8),float( -1/5),float( 0),float( 1/5),float( 2/8),float( 3/13)],
+          [float(-3/18),float(-2/13),float(-1/10),float(0),float( 1/10),float(2/13),float(3/18)]])
+	kern2 = kern1.T
+	return (((signal.convolve2d( r_padded, kern1, 'same')**2 + signal.convolve2d(g_padded, kern1, 'same')**2 + signal.convolve2d(b_padded, kern1,  'same')**2) \
+	+ (signal.convolve2d( r_padded, kern2, 'same')**2 + signal.convolve2d(g_padded, kern2, 'same')**2 + signal.convolve2d( b_padded, kern2, 'same')**2))[3:-3, 3:-3])*np.random.uniform(1, 1.2, r_arr.shape)
+
+
 def importance_inv(arr):
 	return -importance(arr)
+
+def importance_invsq(arr):
+	return -importance_sq(arr)
+
+def importance_invsq2(arr):
+	return -importance_sq2(arr)
+
+def importance_invsobel(arr):
+	return -importance_sobel(arr)
+
+def importance_invsupersobel(arr):
+	return -importance_supersobel(arr)
 
 def importance_diag(arr):
 	r_arr = (arr >> 16) % 256
@@ -30,6 +91,9 @@ def importance_diag(arr):
 
 def import_1chan(arr, padded):
 	return np.abs(arr - padded[1:-1, :-2]) + np.abs(arr - padded[1:-1, 2:]) + np.abs(arr - padded[:-2, 1:-1]) + np.abs(arr - padded[2:, 1:-1])
+
+def sqimport_1chan(arr, padded):
+	return (arr - padded[1:-1, :-2])**2 + (arr - padded[1:-1, 2:])**2 + (arr - padded[:-2, 1:-1])**2 + (arr - padded[2:, 1:-1])**2
 
 def diagimport_1chan(arr, padded):
 	return import_1chan(arr, padded) + np.abs(arr - padded[:-2, :-2]) + np.abs(arr - padded[2:, 2:]) + np.abs(arr - padded[:-2, 2:]) + np.abs(arr - padded[2:, :-2])
@@ -107,7 +171,7 @@ while 1:
 
 	# processing
 	#print 'starting impport'
-	imp = importance_inv(pixels)
+	imp = importance_invsupersobel(pixels)
 	#print imp
 	#print 'ending import'
 	# rows first
@@ -136,7 +200,7 @@ while 1:
 	#print 'after v: ', pixels.shape
 	# processing
 	#print 'starting impport'
-	imp = importance_inv(pixels)
+	imp = importance_invsupersobel(pixels)
 	#print imp
 	#print 'ending import'
 	# rows first
@@ -174,7 +238,7 @@ while 1:
 	print 'frame %d of %d done' % (rowsgone, 766)
 	if rowsgone == 766:
 		break
-suffix = 'inv'
+suffix = 'invsupersobelrand'
 with open('vseams'+suffix, 'w') as f:
 	f.write(repr(vseams))
 
