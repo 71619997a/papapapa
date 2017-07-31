@@ -62,8 +62,13 @@ def importance_supersobel(arr):
           [float(-3/18),float(-2/13),float(-1/10),float(0),float( 1/10),float(2/13),float(3/18)]])
 	kern2 = kern1.T
 	return (((signal.convolve2d( r_padded, kern1, 'same')**2 + signal.convolve2d(g_padded, kern1, 'same')**2 + signal.convolve2d(b_padded, kern1,  'same')**2) \
-	+ (signal.convolve2d( r_padded, kern2, 'same')**2 + signal.convolve2d(g_padded, kern2, 'same')**2 + signal.convolve2d( b_padded, kern2, 'same')**2))[3:-3, 3:-3])*np.random.uniform(1, 1.2, r_arr.shape)
+	+ (signal.convolve2d( r_padded, kern2, 'same')**2 + signal.convolve2d(g_padded, kern2, 'same')**2 + signal.convolve2d( b_padded, kern2, 'same')**2))[3:-3, 3:-3])*np.random.uniform(0.5, 2, r_arr.shape)
 
+def importance_rgb(arr):
+	r_arr = (arr >> 16) % 256
+	g_arr = (arr >> 8) % 256
+	b_arr = arr % 256
+	return r_arr+g_arr+b_arr
 
 def importance_inv(arr):
 	return -importance(arr)
@@ -79,6 +84,9 @@ def importance_invsobel(arr):
 
 def importance_invsupersobel(arr):
 	return -importance_supersobel(arr)
+
+def importance_invrgb(arr):
+	return -importance_rgb(arr)
 
 def importance_diag(arr):
 	r_arr = (arr >> 16) % 256
